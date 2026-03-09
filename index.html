@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Manager Pro</title>
+    <link rel="icon" href="https://fav.farm/✅" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body class="bg-slate-50 min-h-screen font-sans text-slate-900">
+
+    <nav class="bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-50">
+        <div class="max-w-2xl mx-auto px-4 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <div class="bg-indigo-600 p-1.5 rounded-lg">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
+                        <path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd" />
+                    </svg>
+                </div>
+                <span class="font-black text-xl tracking-tighter text-slate-800">TASK<span class="text-indigo-600">API</span></span>
+            </div>
+            <div id="apiStatus" class="flex items-center gap-2 text-xs font-bold text-slate-400 bg-slate-100 px-3 py-1.5 rounded-full">
+                <span class="w-2 h-2 bg-slate-300 rounded-full"></span>
+                CONECTANDO...
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-2xl mx-auto py-8 px-4">
+        <div class="bg-white rounded-3xl shadow-xl shadow-slate-200/60 p-8 mb-8 border border-slate-100 animate__animated animate__fadeIn">
+            <div class="grid grid-cols-3 gap-4 mb-8">
+                <div class="text-center p-4 bg-indigo-50 rounded-2xl">
+                    <p class="text-[10px] uppercase font-black text-indigo-400">Total</p>
+                    <p id="totalCount" class="text-2xl font-black text-indigo-700">0</p>
+                </div>
+                <div class="text-center p-4 bg-emerald-50 rounded-2xl">
+                    <p class="text-[10px] uppercase font-black text-emerald-400">Hechas</p>
+                    <p id="doneCount" class="text-2xl font-black text-emerald-700">0</p>
+                </div>
+                <div class="text-center p-4 bg-amber-50 rounded-2xl">
+                    <p class="text-[10px] uppercase font-black text-amber-400">Pendientes</p>
+                    <p id="pendingCount" class="text-2xl font-black text-amber-700">0</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-4 mb-8">
+                <div class="flex-1 bg-slate-100 h-4 rounded-full overflow-hidden">
+                    <div id="progressBar" class="bg-gradient-to-r from-indigo-500 to-purple-500 h-full transition-all duration-1000 shadow-[0_0_10px_rgba(99,102,241,0.5)]" style="width: 0%"></div>
+                </div>
+                <span id="progressText" class="text-sm font-black text-indigo-600 w-10">0%</span>
+            </div>
+
+            <form onsubmit="event.preventDefault(); addTask();" class="flex gap-3">
+                <input type="text" id="taskInput" placeholder="¿Cuál es el plan para hoy?" 
+                    class="flex-1 px-6 py-4 bg-slate-50 border-2 border-transparent focus:border-indigo-100 focus:bg-white rounded-2xl outline-none transition-all text-slate-700 font-medium">
+                <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-4 rounded-2xl font-bold transition-all shadow-lg shadow-indigo-100 active:scale-95">
+                    Agregar
+                </button>
+            </form>
+        </div>
+
+        <div id="taskList" class="space-y-4"></div>
+
+        <div id="emptyState" class="hidden text-center py-16 animate__animated animate__fadeIn">
+            <div class="text-5xl mb-4">🌈</div>
+            <h3 class="text-lg font-bold text-slate-400">¡Todo al día!</h3>
+            <p class="text-slate-300 text-sm">No tienes tareas pendientes.</p>
+        </div>
+    </div>
+
+    <script>
+        const API = 'http://localhost:3000/tasks';
+
+        async function checkStatus() {
+            const statusDiv = document.getElementById('apiStatus');
+            try {
+                await fetch(API);
+                statusDiv.innerHTML = '<span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span> ONLINE';
+                statusDiv.classList.replace('text-slate-400', 'text-emerald-600');
+            } catch {
+                statusDiv.innerHTML = '<span class="w-2 h-2 bg-red-500 rounded-full"></span> OFFLINE';
+                statusDiv.classList.replace('text-slate-400', 'text-red-600');
+            }
+        }
+
+        async function loadTasks() {
+            try {
+                const res = await fetch(API);
+                const tasks = await res.json();
+                render(tasks);
+                updateStats(tasks);
+                checkStatus();
+            } catch (e) { checkStatus(); }
+        }
+
+        function updateStats(tasks) {
+            const total = tasks.length;
+            const done = tasks.filter(t => t.completed).length;
+            const percent = total === 0 ? 0 : Math.round((done / total) * 100);
+
+            document.getElementById('totalCount').innerText = total;
+            document.getElementById('doneCount').innerText = done;
+            document.getElementById('pendingCount').innerText = total - done;
+            document.getElementById('progressBar').style.width = percent + '%';
+            document.getElementById('progressText').innerText = percent + '%';
+        }
+
+        function render(tasks) {
+            const list = document.getElementById('taskList');
+            const empty = document.getElementById('emptyState');
+            list.innerHTML = '';
+            
+            if (tasks.length === 0) return empty.classList.remove('hidden');
+            empty.classList.add('hidden');
+
+            tasks.reverse().forEach(t => {
+                const div = document.createElement('div');
+                div.className = `group flex items-center justify-between p-5 bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all animate__animated animate__fadeInUp ${t.completed ? 'bg-slate-50/50' : ''}`;
+                div.innerHTML = `
+                    <div class="flex items-center gap-4">
+                        <input type="checkbox" ${t.completed ? 'checked' : ''} onchange="toggle(${t.id}, ${t.completed})"
+                            class="w-6 h-6 rounded-xl accent-indigo-600 cursor-pointer">
+                        <div>
+                            <p class="font-bold tracking-tight ${t.completed ? 'line-through text-slate-400' : 'text-slate-700'}">${t.title}</p>
+                            <p class="text-[10px] font-black text-slate-300 uppercase">${t.createdAt}</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onclick="edit(${t.id}, '${t.title}')" class="p-2 text-blue-400 hover:bg-blue-50 rounded-lg">✏️</button>
+                        <button onclick="del(${t.id})" class="p-2 text-red-400 hover:bg-red-50 rounded-lg">🗑️</button>
+                    </div>
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        async function addTask() {
+            const input = document.getElementById('taskInput');
+            if (input.value.trim().length < 3) return Swal.fire('Error', 'Título muy corto', 'error');
+            await fetch(API, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ title: input.value })
+            });
+            input.value = '';
+            loadTasks();
+        }
+
+        async function toggle(id, curr) {
+            await fetch(`${API}/${id}`, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ completed: !curr })
+            });
+            loadTasks();
+        }
+
+        async function edit(id, old) {
+            const { value: text } = await Swal.fire({
+                title: 'Editar Tarea',
+                input: 'text',
+                inputValue: old,
+                confirmButtonColor: '#4f46e5'
+            });
+            if (text) {
+                await fetch(`${API}/${id}`, {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ title: text })
+                });
+                loadTasks();
+            }
+        }
+
+        async function del(id) {
+            const res = await Swal.fire({
+                title: '¿Borrar?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444'
+            });
+            if (res.isConfirmed) {
+                await fetch(`${API}/${id}`, { method: 'DELETE' });
+                loadTasks();
+            }
+        }
+
+        loadTasks();
+        setInterval(checkStatus, 5000); // Revisa la conexión cada 5 seg
+    </script>
+</body>
+</html>
