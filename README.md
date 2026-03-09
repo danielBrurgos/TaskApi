@@ -56,6 +56,9 @@ Procesamiento de Estilos: Tailwind CSS
 
 Librerías de Soporte: SweetAlert2 (Gestión de diálogos), Animate.css (Transiciones de interfaz).
 
+ https://danielbrurgos.github.io/TaskApi/ aunquew se tiene que poner comando en terminalk para que corra.
+ 
+
 Desarrollado por: Daniel Burgos
 Ingeniería en Sistemas - Universidad de Sonora
 <img width="1919" height="1107" alt="image" src="https://github.com/user-attachments/assets/0a516463-21af-472b-9ac9-bea230de2d5c" />
